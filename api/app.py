@@ -1,7 +1,8 @@
 import dotenv
 import flask
+
 from data import db_session
-from data import _all_models
+from data._all_models import User, WatchListItem
 
 config = dotenv.dotenv_values('.env')
 
@@ -12,11 +13,13 @@ app.config['SECRET_KEY'] = config['SECRET_KEY']
 @app.route('/')
 def index():
     session = db_session.create_session()
-    users = session.query(_all_models.User).all()
-    users_id = []
-    for user in users:
-        users_id.append(user.id)
-    return flask.jsonify({"users": users_id})
+    watch_lists = session.query(WatchListItem).all()
+    return flask.jsonify({
+        "watch_items": [
+            item.to_dict(only=("id", "imdb_id", "user_id", "user.id"))
+            for item in watch_lists
+        ]
+    })
 
 
 def main():
@@ -24,7 +27,6 @@ def main():
                            config['DB_HOST'], config['DB_PORT'],
                            config['DB_FILE_NAME'])
     app.run(debug=True, host="0.0.0.0", port=5000)
-
 
 if __name__ == "__main__":
     main()
