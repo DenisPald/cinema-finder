@@ -2,7 +2,7 @@ import dotenv
 import flask
 from data import db_session
 from flask_restful import Api
-from resources import watch_items, users
+from resources import users, watch_items
 
 config = dotenv.dotenv_values('.env')
 

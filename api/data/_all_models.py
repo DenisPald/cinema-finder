@@ -10,7 +10,9 @@ class User(SqlAlchemyBase, SerializerMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer,
                            primary_key=True,
                            autoincrement=True)
-    watch_item = orm.relationship("WatchListItem", back_populates="user")
+    watch_item = orm.relationship("WatchListItem",
+                                  back_populates="user",
+                                  cascade="all, delete-orphan")
 
 
 class WatchListItem(SqlAlchemyBase, SerializerMixin):
