@@ -1,0 +1,6 @@
+Endpoint               Methods      Rule
+---------------------  -----------  -----------------------
+userlistresource       GET, POST    /users/
+userresource           DELETE, GET  /users/<int:id>/
+watchlistitemresource  DELETE, GET  /watch_items/<int:id>/
+watchlistresource      GET, POST    /watch_items/

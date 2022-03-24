@@ -1,11 +1,22 @@
+import abc
+
 import flask
 from data import db_session
 from flask_restful import Resource, reqparse
 
 
-class BaseResource(Resource):
+class BaseResource(abc.ABCMeta, Resource):
+    """Base class for single resource
+
+    Change __init__ method with your values
+    """
 
     def __init__(self):
+        """Change this values:
+
+        self.entity = SQLAlchemy model class
+        self.columns_to_response = set(Columns to response on get request)
+        """
         self.entity = None
         self.columns_to_response = set()
 
@@ -50,11 +61,23 @@ class BaseResource(Resource):
         return flask.jsonify({"error": ""})
 
 
-class BaseListResource(Resource):
+class BaseListResource(abc.ABCMeta, Resource):
+    """Base class for list of resource
+
+    Change __init__ method with your values
+    """
 
     def __init__(self):
+        """Change this values:
+
+        self.entity = SQLAlchemy model class
+        self.columns_to_response = set(Columns to response on get request)
+        self.post_parser_args = set(Args for post request)
+        """
         self.entity = None
+
         self.columns_to_response = set()
+
         self.post_parser_args = set()
 
     def get(self):
