@@ -1,11 +1,9 @@
-import abc
-
 import flask
 from data import db_session
 from flask_restful import Resource, reqparse
 
 
-class BaseResource(abc.ABCMeta, Resource):
+class BaseResource(Resource):
     """Base class for single resource
 
     Change __init__ method with your values
@@ -61,7 +59,7 @@ class BaseResource(abc.ABCMeta, Resource):
         return flask.jsonify({"error": ""})
 
 
-class BaseListResource(abc.ABCMeta, Resource):
+class BaseListResource(Resource):
     """Base class for list of resource
 
     Change __init__ method with your values
