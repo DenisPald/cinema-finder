@@ -19,7 +19,7 @@ def main():
     db_session.global_init(config['DB_USER'], config['DB_PASSWORD'],
                            config['DB_HOST'], config['DB_PORT'],
                            config['DB_FILE_NAME'])
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="localhost", port=5000)
 
 
 if __name__ == "__main__":
