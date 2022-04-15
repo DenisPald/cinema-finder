@@ -6,7 +6,8 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.storage import FSMContext
 from bot_dialogs_states import Dialogs, States
-from keyboards import film_cd, get_main_keyboard, get_search_keyboard
+from keyboards import (film_cd, get_main_keyboard, get_movie_info_keyboard,
+                       get_search_keyboard)
 from urls import Urls
 
 # from aiogram.utils.exceptions import MessageNotModified, Throttled
@@ -26,7 +27,7 @@ dp = Dispatcher(bot, storage=storage)
 @dp.callback_query_handler(film_cd.filter(action='get main page'), state="*")
 async def query_main(query: types.InlineQuery, state: FSMContext):
     await query.message.edit_text(
-        Dialogs.main_page.format(name=query.message.from_user.full_name),
+        Dialogs.main_page.format(name=query.from_user.full_name),
         reply_markup=get_main_keyboard())
 
     if state:
@@ -93,8 +94,8 @@ async def state_get_movie(message: types.Message, state: FSMContext):
         data = requests.get(Urls.get_by_id.format(
             id=id, imdb_token=IMDB_TOKEN)).json()
 
-        #TODO - отдельная клавиатура сюда
-        await message.answer(data['fullTitle'] + "\n" + data['plotLocal'])
+        await message.answer(data['fullTitle'] + "\n" + data['plotLocal'],
+                             reply_markup=get_movie_info_keyboard(id))
 
         if state:
             await state.finish()
