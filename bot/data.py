@@ -1,4 +1,4 @@
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 
 @dataclass
@@ -25,3 +25,6 @@ class MovieInfo:
         res += f"Metacritic: {self.ratings['metacritic']}\n"
         res += f"Rotten tomatoes: {self.ratings['rottenTomatoes']}\n"
         return res
+
+    def similars_get_poster_link(self, number):
+        return self.similars[number]['image']

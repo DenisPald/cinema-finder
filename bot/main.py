@@ -8,7 +8,8 @@ from aiogram.dispatcher.storage import FSMContext
 from bot_dialogs_states import Dialogs, States
 from data import MovieInfo
 from keyboards import (film_cd, get_main_keyboard, get_movie_info_keyboard,
-                       get_movie_number_keyboard, get_search_keyboard)
+                       get_movie_number_keyboard, get_search_keyboard,
+                       get_similars_keyboard)
 from urls import Urls
 
 config = dotenv.dotenv_values('.env')
@@ -82,14 +83,9 @@ async def state_get_movies(message: types.Message, state: FSMContext):
     except Exception as e:
         await message.answer(Dialogs.error_picture_loading)
 
-    text = Dialogs.get_movies_search_result
-    for i, film in enumerate(data['results'][:5]):
-        text += f"\n{i+1} {film['title']} {film['description']}"
+    text = Dialogs.get_movies_search_result + "\n" + Dialogs.get_movies_get_number
 
-    text += "\n\n"
-    text += Dialogs.get_movies_get_number
-
-    await message.answer(text=text, reply_markup=get_movie_number_keyboard())
+    await message.answer(text=text, reply_markup=get_movie_number_keyboard(data['results'][:5]))
     await wait_message.delete()
 
     storage['search_result'] = data['results'][:5]
@@ -123,7 +119,39 @@ async def query_get_movie(query: types.CallbackQuery, state: FSMContext):
     storage['current_movie_data'] = MovieInfo(
         data['id'], data['trailer']['linkEmbed'],
         data['posters']['posters'][:5], data['plot'], data['awards'],
-        data['ratings'], data['stars'], data['similars'][:10],
+        data['ratings'], data['stars'], data['similars'][:5],
+        data['plotLocal'])
+
+    await dp.storage.update_data(chat=query.from_user.id, data=storage)
+
+    await States.checking_movie.set()
+
+
+@dp.callback_query_handler(film_cd.filter(action="get movie by id"),
+                           state=States.checking_movie)
+async def query_get_movie_by_id(query: types.CallbackQuery):
+    storage = await dp.storage.get_data(chat=query.from_user.id)
+    id = query.data.split(":")[1]
+
+    data = requests.get(Urls.get_full_data.format(
+        id=id, imdb_token=IMDB_TOKEN)).json()
+
+    if data['errorMessage'] == "":
+        await query.answer(Dialogs.error_message)
+        return
+
+    if data['plotLocal']:
+        await query.message.answer(data['fullTitle'] + "\n" +
+                                   data['plotLocal'],
+                                   reply_markup=get_movie_info_keyboard(id))
+    else:
+        await query.message.answer(data['fullTitle'] + "\n" + data['plot'],
+                                   reply_markup=get_movie_info_keyboard(id))
+
+    storage['current_movie_data'] = MovieInfo(
+        data['id'], data['trailer']['linkEmbed'],
+        data['posters']['posters'][:5], data['plot'], data['awards'],
+        data['ratings'], data['stars'], data['similars'][:5],
         data['plotLocal'])
 
     await dp.storage.update_data(chat=query.from_user.id, data=storage)
@@ -152,8 +180,11 @@ async def query_get_posters(query: types.CallbackQuery):
     media = types.MediaGroup()
 
     for i in range(5):
-        media.attach_photo(storage['current_movie_data'].get_poster_link(i),
-                           str(i))
+        try:
+            media.attach_photo(
+                storage['current_movie_data'].get_poster_link(i), str(i))
+        except:
+            break
 
     await query.message.answer_media_group(media)
     await query.message.answer(Dialogs.get_posters_ok,
@@ -165,9 +196,16 @@ async def query_get_posters(query: types.CallbackQuery):
 async def query_get_original_plot(query: types.CallbackQuery):
     storage = await dp.storage.get_data(chat=query.from_user.id)
 
-    id = storage['current_movie_data'].id
-
     await query.message.edit_text(storage['current_movie_data'].plot,
+                                  reply_markup=get_movie_info_keyboard(id))
+
+
+@dp.callback_query_handler(film_cd.filter(action="get local plot"),
+                           state=States.checking_movie)
+async def query_get_local_plot(query: types.CallbackQuery):
+    storage = await dp.storage.get_data(chat=query.from_user.id)
+
+    await query.message.edit_text(storage['current_movie_data'].plotLocal,
                                   reply_markup=get_movie_info_keyboard(id))
 
 
@@ -209,12 +247,20 @@ async def query_get_rewards(query: types.CallbackQuery):
 async def query_get_similars(query: types.CallbackQuery):
     storage = await dp.storage.get_data(chat=query.from_user.id)
 
-    id = storage['current_movie_data'].id
+    media = types.MediaGroup()
 
-    print(storage['current_movie_data'].similars)
+    for i in range(5):
+        try:
+            media.attach_photo(
+                storage['current_movie_data'].similars_get_poster_link(i),
+                str(i))
+        except:
+            break
 
-    #TODO keyboard here
-    await query.message.edit_text("Do keyboard here")
+    await query.message.answer_media_group(media)
+    await query.message.answer(Dialogs.similars,
+                               reply_markup=get_similars_keyboard(
+                                   storage['current_movie_data'].similars))
 
 
 if __name__ == '__main__':

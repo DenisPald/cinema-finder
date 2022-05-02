@@ -30,14 +30,15 @@ def get_search_keyboard() -> types.InlineKeyboardMarkup:
     return markup
 
 
-def get_movie_number_keyboard() -> types.InlineKeyboardMarkup:
+def get_movie_number_keyboard(search_results) -> types.InlineKeyboardMarkup:
     markup = types.InlineKeyboardMarkup()
 
-    for i in range(1, 6):
+    for i, movie in enumerate(search_results):
         markup.add(
-            types.InlineKeyboardButton(str(i),
-                                       callback_data=film_cd.new(
-                                           id="-1", action=str(i))))
+            types.InlineKeyboardButton(
+                str(i + 1) + " " + search_results[i]['title'],
+                callback_data=film_cd.new(id="-1", action=str(i + 1))))
+
     markup.add(
         types.InlineKeyboardButton("<< Главная <<",
                                    callback_data=film_cd.new(
@@ -66,6 +67,11 @@ def get_movie_info_keyboard(film_id) -> types.InlineKeyboardMarkup:
             "Оригинальное описание",
             callback_data=film_cd.new(id=film_id, action="get original plot")))
 
+    markup.insert(
+        types.InlineKeyboardButton("Русское описание",
+                                   callback_data=film_cd.new(
+                                       id=film_id, action="get local plot")))
+
     markup.add(
         types.InlineKeyboardButton("Звезды",
                                    callback_data=film_cd.new(
@@ -79,18 +85,26 @@ def get_movie_info_keyboard(film_id) -> types.InlineKeyboardMarkup:
                                    callback_data=film_cd.new(
                                        id=film_id, action="get rewards")))
     markup.add(
-        types.InlineKeyboardButton(
-            "Похожее",
-            callback_data=film_cd.new(id=film_id,
-                                      action="get similars")))
-
-    markup.add(
-        types.InlineKeyboardButton("Назад к списку",
+        types.InlineKeyboardButton("Похожее",
                                    callback_data=film_cd.new(
-                                       id="-1", action="back to search list")))
+                                       id=film_id, action="get similars")))
+
     markup.add(
         types.InlineKeyboardButton("<< Главная <<",
                                    callback_data=film_cd.new(
                                        id="-1", action="get main page")))
+
+    return markup
+
+
+def get_similars_keyboard(similars: list) -> types.InlineKeyboardMarkup:
+    markup = types.InlineKeyboardMarkup()
+
+    for i in range(5):
+        markup.add(
+            types.InlineKeyboardButton(similars[i]['title'],
+                                       callback_data=film_cd.new(
+                                           id=similars[i]['id'],
+                                           action="get movie by id")))
 
     return markup
