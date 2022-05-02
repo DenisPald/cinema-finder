@@ -7,8 +7,7 @@ class UserResource(BaseResource):
     def __init__(self):
         self.entity = User
         self.columns_to_response = ("id", "watch_item.id",
-                                    "watch_item.imdb_id", "state", "telegram_id")
-        self.put_parser_args = ("state", )
+                                    "watch_item.imdb_id", "telegram_id")
 
 
 class UserListResource(BaseListResource):

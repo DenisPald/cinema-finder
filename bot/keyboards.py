@@ -30,6 +30,22 @@ def get_search_keyboard() -> types.InlineKeyboardMarkup:
     return markup
 
 
+def get_movie_number_keyboard() -> types.InlineKeyboardMarkup:
+    markup = types.InlineKeyboardMarkup()
+
+    for i in range(1, 6):
+        markup.add(
+            types.InlineKeyboardButton(str(i),
+                                       callback_data=film_cd.new(
+                                           id="-1", action=str(i))))
+    markup.add(
+        types.InlineKeyboardButton("<< Главная <<",
+                                   callback_data=film_cd.new(
+                                       id="-1", action="get main page")))
+
+    return markup
+
+
 def get_movie_info_keyboard(film_id) -> types.InlineKeyboardMarkup:
     markup = types.InlineKeyboardMarkup()
 
@@ -49,10 +65,11 @@ def get_movie_info_keyboard(film_id) -> types.InlineKeyboardMarkup:
         types.InlineKeyboardButton(
             "Оригинальное описание",
             callback_data=film_cd.new(id=film_id, action="get original plot")))
+
     markup.add(
-        types.InlineKeyboardButton("Отзывы",
+        types.InlineKeyboardButton("Звезды",
                                    callback_data=film_cd.new(
-                                       id=film_id, action="get reviews")))
+                                       id=film_id, action="get stars")))
     markup.insert(
         types.InlineKeyboardButton("Оценки",
                                    callback_data=film_cd.new(
@@ -63,10 +80,14 @@ def get_movie_info_keyboard(film_id) -> types.InlineKeyboardMarkup:
                                        id=film_id, action="get rewards")))
     markup.add(
         types.InlineKeyboardButton(
-            "Посетить страницу фильма на других сайтах",
+            "Похожее",
             callback_data=film_cd.new(id=film_id,
-                                      action="get external sites")))
+                                      action="get similars")))
 
+    markup.add(
+        types.InlineKeyboardButton("Назад к списку",
+                                   callback_data=film_cd.new(
+                                       id="-1", action="back to search list")))
     markup.add(
         types.InlineKeyboardButton("<< Главная <<",
                                    callback_data=film_cd.new(

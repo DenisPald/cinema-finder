@@ -10,7 +10,6 @@ class User(SqlAlchemyBase, SerializerMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer,
                            primary_key=True,
                            autoincrement=True)
-    state = sqlalchemy.Column(sqlalchemy.String)
     telegram_id = sqlalchemy.Column(sqlalchemy.Integer, unique=True)
     watch_item = orm.relationship("WatchListItem",
                                   back_populates="user",
