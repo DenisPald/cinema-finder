@@ -7,10 +7,12 @@ from .db_session import SqlAlchemyBase
 
 class User(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'users'
+    #MUST be telegram id
     id = sqlalchemy.Column(sqlalchemy.Integer,
+                           unique=True,
                            primary_key=True,
-                           autoincrement=True)
-    telegram_id = sqlalchemy.Column(sqlalchemy.Integer, unique=True)
+                           autoincrement=False,
+                           nullable=False)
     watch_item = orm.relationship("WatchListItem",
                                   back_populates="user",
                                   cascade="all, delete-orphan")
@@ -21,6 +23,7 @@ class WatchListItem(SqlAlchemyBase, SerializerMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer,
                            primary_key=True,
                            autoincrement=True)
+    title = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     imdb_id = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     user_id = sqlalchemy.Column(sqlalchemy.Integer,
                                 sqlalchemy.ForeignKey("users.id"))

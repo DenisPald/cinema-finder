@@ -15,10 +15,15 @@ class Dialogs():
 
     similars = "Похожее:"
 
+    list_of_favorite = "Ваши закладки"
+    empty_list_of_favorite = "У вас пока нет закладок"
+
     error_message = "Произошла ошибка"
     error_not_founded = "Ничего не найдено"
     error_picture_loading = "Ошибка при загрузке постеров"
 
+    success_adding_movie = "Успешно добавлено в ваши закладки"
+    success_deleting_movie= "Успешно удалено из ваших закладок"
 
 class States(StatesGroup):
     get_movies = State()

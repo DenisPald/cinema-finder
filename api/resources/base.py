@@ -135,9 +135,6 @@ class BaseListResource(Resource):
 
         try:
             args = parser.parse_args()
-            # TODO delete this PLS
-            # args['telegram_id'] = int(args['telegram_id'])
-            print("\n\n\n\n", args)
         except Exception as e:
             return flask.jsonify({"error": f"incomplete data: {e}"})
 

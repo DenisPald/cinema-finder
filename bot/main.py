@@ -9,7 +9,7 @@ from bot_dialogs_states import Dialogs, States
 from data import MovieInfo
 from keyboards import (film_cd, get_main_keyboard, get_movie_info_keyboard,
                        get_movie_number_keyboard, get_search_keyboard,
-                       get_similars_keyboard)
+                       movies_list_keyboard)
 from urls import Urls
 
 config = dotenv.dotenv_values('.env')
@@ -17,11 +17,27 @@ logging.basicConfig(level=logging.INFO)
 
 TELEGRAM_TOKEN = config['TELEGRAM_TOKEN']
 IMDB_TOKEN = config['IMDB_TOKEN']
+API_HOST = config['API_HOST']
 
 storage = MemoryStorage()
 
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher(bot, storage=storage)
+
+
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message):
+    try:
+        requests.post(
+            Urls.register.format(api_uri=API_HOST,
+                                 telegram_id=message.from_user.id))
+    except Exception as e:
+        await message.answer(Dialogs.error_message)
+        return
+
+    await message.answer(
+        Dialogs.main_page.format(name=message.from_user.full_name),
+        reply_markup=get_main_keyboard())
 
 
 @dp.callback_query_handler(film_cd.filter(action='get main page'), state="*")
@@ -34,7 +50,26 @@ async def query_main(query: types.CallbackQuery, state: FSMContext):
         await state.finish()
 
 
-@dp.message_handler(commands=['start', 'exit'], state="*")
+@dp.callback_query_handler(film_cd.filter(action='get favorite list'),
+                           state="*")
+async def query_favorite_list(query: types.CallbackQuery, state: FSMContext):
+
+    await States.checking_movie.set()
+
+    data = requests.get(
+        Urls.get_user_info.format(api_uri=API_HOST,
+                                  id=query.from_user.id)).json()
+
+    if data["error"] == "":
+        await query.message.edit_text(Dialogs.list_of_favorite,
+                                      reply_markup=movies_list_keyboard(
+                                          data['info']['watch_item']))
+    else:
+        await query.message.edit_text(Dialogs.empty_list_of_favorite,
+                                      reply_markup=get_main_keyboard())
+
+
+@dp.message_handler(commands=['exit'], state="*")
 async def cmd_main(message: types.Message, state: FSMContext):
     await message.answer(
         Dialogs.main_page.format(name=message.from_user.full_name),
@@ -85,7 +120,9 @@ async def state_get_movies(message: types.Message, state: FSMContext):
 
     text = Dialogs.get_movies_search_result + "\n" + Dialogs.get_movies_get_number
 
-    await message.answer(text=text, reply_markup=get_movie_number_keyboard(data['results'][:5]))
+    await message.answer(text=text,
+                         reply_markup=get_movie_number_keyboard(
+                             data['results'][:5]))
     await wait_message.delete()
 
     storage['search_result'] = data['results'][:5]
@@ -117,7 +154,7 @@ async def query_get_movie(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_reply_markup(get_movie_info_keyboard(id))
 
     storage['current_movie_data'] = MovieInfo(
-        data['id'], data['trailer']['linkEmbed'],
+        data['id'], data['fullTitle'], data['trailer']['linkEmbed'],
         data['posters']['posters'][:5], data['plot'], data['awards'],
         data['ratings'], data['stars'], data['similars'][:5],
         data['plotLocal'])
@@ -259,8 +296,57 @@ async def query_get_similars(query: types.CallbackQuery):
 
     await query.message.answer_media_group(media)
     await query.message.answer(Dialogs.similars,
-                               reply_markup=get_similars_keyboard(
+                               reply_markup=movies_list_keyboard(
                                    storage['current_movie_data'].similars))
+
+
+@dp.callback_query_handler(film_cd.filter(action="add to favorite"),
+                           state=States.checking_movie)
+async def query_add_to_favorite(query: types.CallbackQuery):
+    storage = await dp.storage.get_data(chat=query.from_user.id)
+
+    id = storage['current_movie_data'].id
+
+    try:
+        requests.post(
+            Urls.new_watch_item.format(
+                api_uri=API_HOST,
+                imdb_id=storage['current_movie_data'].id,
+                user_id=query.from_user.id,
+                title=storage['current_movie_data'].title))
+        await query.message.edit_text(Dialogs.success_adding_movie,
+                                      reply_markup=get_movie_info_keyboard(id))
+    except:
+        await query.message.edit_text(Dialogs.error_message,
+                                      reply_markup=get_movie_info_keyboard(id))
+        return
+
+
+@dp.callback_query_handler(film_cd.filter(action="delete from favorite"),
+                           state=States.checking_movie)
+async def query_delete_from_favorite(query: types.CallbackQuery):
+    storage = await dp.storage.get_data(chat=query.from_user.id)
+
+    # Костыль чтобы получить id итема в закладках имея id пользователя и фильма
+    movie_id = storage['current_movie_data'].id
+    id = None
+    data = requests.get(
+        Urls.get_user_info.format(api_uri=API_HOST,
+                                  id=query.from_user.id)).json()
+    for i in data['info']['watch_item']:
+        if i['imdb_id'] == movie_id:
+            id = i['id']
+
+    try:
+        requests.delete(Urls.delete_watch_item.format(api_uri=API_HOST, id=id))
+        await query.message.edit_text(
+            Dialogs.success_deleting_movie,
+            reply_markup=get_movie_info_keyboard(movie_id))
+    except:
+        await query.message.edit_text(
+            Dialogs.error_message,
+            reply_markup=get_movie_info_keyboard(movie_id))
+        return
 
 
 if __name__ == '__main__':

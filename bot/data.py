@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 @dataclass
 class MovieInfo:
     id: str
+    title: str
     trailer_link: str
     posters: list[dict]
     plot: str

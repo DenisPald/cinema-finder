@@ -15,7 +15,7 @@ def get_main_keyboard() -> types.InlineKeyboardMarkup:
     markup.add(
         types.InlineKeyboardButton("Мои закладки",
                                    callback_data=film_cd.new(
-                                       id="-1", action="get user movies")))
+                                       id="-1", action="get favorite list")))
     return markup
 
 
@@ -54,6 +54,10 @@ def get_movie_info_keyboard(film_id) -> types.InlineKeyboardMarkup:
         types.InlineKeyboardButton("Добавить в закладки",
                                    callback_data=film_cd.new(
                                        id=film_id, action="add to favorite")))
+    markup.insert(
+        types.InlineKeyboardButton("Удалить из закладок",
+                                   callback_data=film_cd.new(
+                                       id=film_id, action="delete from favorite")))
     markup.add(
         types.InlineKeyboardButton("Посмотреть трейлер(IMDB)",
                                    callback_data=film_cd.new(
@@ -97,14 +101,23 @@ def get_movie_info_keyboard(film_id) -> types.InlineKeyboardMarkup:
     return markup
 
 
-def get_similars_keyboard(similars: list) -> types.InlineKeyboardMarkup:
+def movies_list_keyboard(movies: list) -> types.InlineKeyboardMarkup:
     markup = types.InlineKeyboardMarkup()
 
-    for i in range(5):
-        markup.add(
-            types.InlineKeyboardButton(similars[i]['title'],
-                                       callback_data=film_cd.new(
-                                           id=similars[i]['id'],
-                                           action="get movie by id")))
+    for i in range(len(movies)):
+        # Костыль из-за путаницы в названиях
+        if "imdb_id" in movies[i]:
+            id = movies[i]['imdb_id']
+        else:
+            id = movies[i]['id']
 
+        markup.add(
+            types.InlineKeyboardButton(movies[i]['title'],
+                                       callback_data=film_cd.new(
+                                           id=id, action="get movie by id")))
+
+    markup.add(
+        types.InlineKeyboardButton("<< Главная <<",
+                                   callback_data=film_cd.new(
+                                       id="-1", action="get main page")))
     return markup
