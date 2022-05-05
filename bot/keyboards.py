@@ -1,6 +1,8 @@
 from aiogram import types
 from aiogram.utils.callback_data import CallbackData
 
+# Callback data формата
+# film:<id>:<action>
 film_cd = CallbackData("film", "id", "action")
 
 
@@ -29,22 +31,6 @@ def get_search_keyboard() -> types.InlineKeyboardMarkup:
 
     return markup
 
-
-def get_movie_number_keyboard(search_results) -> types.InlineKeyboardMarkup:
-    markup = types.InlineKeyboardMarkup()
-
-    for i, movie in enumerate(search_results):
-        markup.add(
-            types.InlineKeyboardButton(
-                str(i + 1) + " " + search_results[i]['title'],
-                callback_data=film_cd.new(id="-1", action=str(i + 1))))
-
-    markup.add(
-        types.InlineKeyboardButton("<< Главная <<",
-                                   callback_data=film_cd.new(
-                                       id="-1", action="get main page")))
-
-    return markup
 
 
 def get_movie_info_keyboard(film_id) -> types.InlineKeyboardMarkup:

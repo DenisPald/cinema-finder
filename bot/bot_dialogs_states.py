@@ -28,6 +28,4 @@ class Dialogs():
 
 class States(StatesGroup):
     get_movies = State()
-    get_movie = State()
-    get_movie_info = State()
     checking_movie = State()

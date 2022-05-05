@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import dotenv
 import requests
@@ -8,8 +9,7 @@ from aiogram.dispatcher.storage import FSMContext
 from bot_dialogs_states import Dialogs, States
 from data import MovieInfo
 from keyboards import (film_cd, get_main_keyboard, get_movie_info_keyboard,
-                       get_movie_number_keyboard, get_search_keyboard,
-                       movies_list_keyboard)
+                       get_search_keyboard, movies_list_keyboard)
 from urls import Urls
 
 config = dotenv.dotenv_values('.env')
@@ -31,7 +31,7 @@ async def cmd_start(message: types.Message):
         requests.post(
             Urls.register.format(api_uri=API_HOST,
                                  telegram_id=message.from_user.id))
-    except Exception as e:
+    except:
         await message.answer(Dialogs.error_message)
         return
 
@@ -40,19 +40,25 @@ async def cmd_start(message: types.Message):
         reply_markup=get_main_keyboard())
 
 
+@dp.message_handler(commands=['exit'], state="*")
 @dp.callback_query_handler(film_cd.filter(action='get main page'), state="*")
-async def query_main(query: types.CallbackQuery, state: FSMContext):
-    await query.message.edit_text(
-        Dialogs.main_page.format(name=query.from_user.full_name),
-        reply_markup=get_main_keyboard())
-
+async def main_page(query: Union[types.CallbackQuery, types.Message],
+                    state: FSMContext):
+    if isinstance(query, types.CallbackQuery):
+        await query.message.edit_text(
+            Dialogs.main_page.format(name=query.from_user.full_name),
+            reply_markup=get_main_keyboard())
+    else:
+        await query.answer(
+            Dialogs.main_page.format(name=query.from_user.full_name),
+            reply_markup=get_main_keyboard())
     if state:
         await state.finish()
 
 
 @dp.callback_query_handler(film_cd.filter(action='get favorite list'),
                            state="*")
-async def query_favorite_list(query: types.CallbackQuery, state: FSMContext):
+async def query_favorite_list(query: types.CallbackQuery):
 
     await States.checking_movie.set()
 
@@ -69,15 +75,6 @@ async def query_favorite_list(query: types.CallbackQuery, state: FSMContext):
                                       reply_markup=get_main_keyboard())
 
 
-@dp.message_handler(commands=['exit'], state="*")
-async def cmd_main(message: types.Message, state: FSMContext):
-    await message.answer(
-        Dialogs.main_page.format(name=message.from_user.full_name),
-        reply_markup=get_main_keyboard())
-    if state:
-        await state.finish()
-
-
 @dp.callback_query_handler(film_cd.filter(action='get search page'), state="*")
 async def query_search_page(query: types.CallbackQuery):
     await query.message.edit_text(Dialogs.enter_movie_name,
@@ -87,9 +84,9 @@ async def query_search_page(query: types.CallbackQuery):
 
 
 @dp.message_handler(state=States.get_movies)
-async def state_get_movies(message: types.Message, state: FSMContext):
-
+async def state_get_movies(message: types.Message):
     wait_message = await message.answer(Dialogs.wait_loading)
+
     await types.ChatActions.upload_photo()
 
     title = message.text
@@ -99,7 +96,7 @@ async def state_get_movies(message: types.Message, state: FSMContext):
         return
     data = data.json()
 
-    if data['errorMessage'] != "":
+    if data['errorMessage']:
         await message.answer(Dialogs.error_message)
         return
 
@@ -107,59 +104,24 @@ async def state_get_movies(message: types.Message, state: FSMContext):
         await message.answer(Dialogs.error_not_founded)
         return
 
-    storage = await dp.storage.get_data(chat=message.from_user.id)
+    media = types.MediaGroup()
+    for i in data['results'][:5]:
+        try:
+            media.attach_photo(i['image'], i['title'] + i['description'])
+        except:
+            break
 
     try:
-        media = types.MediaGroup()
-        for i in data['results'][:5]:
-            media.attach_photo(i['image'], i['title'] + i['description'])
-
         await message.answer_media_group(media)
-    except Exception as e:
+    except:
         await message.answer(Dialogs.error_picture_loading)
 
     text = Dialogs.get_movies_search_result + "\n" + Dialogs.get_movies_get_number
 
     await message.answer(text=text,
-                         reply_markup=get_movie_number_keyboard(
+                         reply_markup=movies_list_keyboard(
                              data['results'][:5]))
     await wait_message.delete()
-
-    storage['search_result'] = data['results'][:5]
-
-    await dp.storage.update_data(chat=message.from_user.id, data=storage)
-
-    await States.get_movie.set()
-
-
-@dp.callback_query_handler(state=States.get_movie)
-async def query_get_movie(query: types.CallbackQuery, state: FSMContext):
-    storage = await dp.storage.get_data(chat=query.from_user.id)
-
-    number = int(query.data.split(":")[2]) - 1
-    id = storage['search_result'][number]['id']
-    data = requests.get(Urls.get_full_data.format(
-        id=id, imdb_token=IMDB_TOKEN)).json()
-
-    if data['errorMessage']:
-        await query.answer(Dialogs.error_message)
-        return
-
-    if data['plotLocal']:
-        await query.message.edit_text(data['fullTitle'] + "\n" +
-                                      data['plotLocal'])
-    else:
-        await query.message.edit_text(data['fullTitle'] + "\n" + data['plot'])
-
-    await query.message.edit_reply_markup(get_movie_info_keyboard(id))
-
-    storage['current_movie_data'] = MovieInfo(
-        data['id'], data['fullTitle'], data['trailer']['linkEmbed'],
-        data['posters']['posters'][:5], data['plot'], data['awards'],
-        data['ratings'], data['stars'], data['similars'][:5],
-        data['plotLocal'])
-
-    await dp.storage.update_data(chat=query.from_user.id, data=storage)
 
     await States.checking_movie.set()
 
@@ -168,6 +130,7 @@ async def query_get_movie(query: types.CallbackQuery, state: FSMContext):
                            state=States.checking_movie)
 async def query_get_movie_by_id(query: types.CallbackQuery):
     storage = await dp.storage.get_data(chat=query.from_user.id)
+    # Вытягиваем из CallbackData формата film_cd id
     id = query.data.split(":")[1]
 
     data = requests.get(Urls.get_full_data.format(
