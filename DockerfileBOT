@@ -1,0 +1,12 @@
+FROM python:3.10.2-slim
+
+WORKDIR /usr/src/app
+
+COPY requirementsBOT.txt ./
+RUN pip install --no-cache-dir -r requirementsBOT.txt
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["python3", "./bot/main.py"]
