@@ -21,6 +21,7 @@ class Dialogs():
     error_message = "Произошла ошибка"
     error_not_founded = "Ничего не найдено"
     error_picture_loading = "Ошибка при загрузке постеров"
+    error_no_similars = "Похожих фильмов не найдено"
 
     success_adding_movie = "Успешно добавлено в ваши закладки"
     success_deleting_movie= "Успешно удалено из ваших закладок"

@@ -141,7 +141,7 @@ async def query_get_movie(query: types.CallbackQuery, state: FSMContext):
     data = requests.get(Urls.get_full_data.format(
         id=id, imdb_token=IMDB_TOKEN)).json()
 
-    if data['errorMessage'] == "":
+    if data['errorMessage']:
         await query.answer(Dialogs.error_message)
         return
 
@@ -173,20 +173,20 @@ async def query_get_movie_by_id(query: types.CallbackQuery):
     data = requests.get(Urls.get_full_data.format(
         id=id, imdb_token=IMDB_TOKEN)).json()
 
-    if data['errorMessage'] == "":
+    if data['errorMessage']:
         await query.answer(Dialogs.error_message)
         return
 
     if data['plotLocal']:
-        await query.message.answer(data['fullTitle'] + "\n" +
-                                   data['plotLocal'],
-                                   reply_markup=get_movie_info_keyboard(id))
+        await query.message.edit_text(data['fullTitle'] + "\n" +
+                                      data['plotLocal'],
+                                      reply_markup=get_movie_info_keyboard(id))
     else:
-        await query.message.answer(data['fullTitle'] + "\n" + data['plot'],
-                                   reply_markup=get_movie_info_keyboard(id))
+        await query.message.edit_text(data['fullTitle'] + "\n" + data['plot'],
+                                      reply_markup=get_movie_info_keyboard(id))
 
     storage['current_movie_data'] = MovieInfo(
-        data['id'], data['trailer']['linkEmbed'],
+        data['id'], data['fullTitle'], data['trailer']['linkEmbed'],
         data['posters']['posters'][:5], data['plot'], data['awards'],
         data['ratings'], data['stars'], data['similars'][:5],
         data['plotLocal'])
@@ -284,9 +284,16 @@ async def query_get_rewards(query: types.CallbackQuery):
 async def query_get_similars(query: types.CallbackQuery):
     storage = await dp.storage.get_data(chat=query.from_user.id)
 
+    id = storage['current_movie_data'].id
+
+    if len(storage['current_movie_data'].similars) == 0:
+        await query.message.edit_text(Dialogs.error_no_similars,
+                                      reply_markup=get_movie_info_keyboard(id))
+        return
+
     media = types.MediaGroup()
 
-    for i in range(5):
+    for i in range(len(storage['current_movie_data'].similars)):
         try:
             media.attach_photo(
                 storage['current_movie_data'].similars_get_poster_link(i),
